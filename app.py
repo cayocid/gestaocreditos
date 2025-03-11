@@ -42,7 +42,7 @@ def init_db():
                         FOREIGN KEY(usina_id) REFERENCES usina(id),
                         FOREIGN KEY(cliente_id) REFERENCES clientes(id)
                     )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS pagamentos (
+    cursor.execute('''CREATE TABLE IF NOT EXISTS faturamento (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         cliente_id INTEGER,
                         usina_id INTEGER,
@@ -68,28 +68,28 @@ def init_db():
 init_db()
 
 # Interface com menu lateral fixo
-st.set_page_config(page_title="Gestão de Energia", layout="wide")
-st.sidebar.title("Menu")
-menu = st.sidebar.radio("Navegação", ["Dashboard", "CRM", "Faturamento", "Gestão de UC’s e UG’s", "Configurações"])
+st.set_page_config(page_title="Sunne Gestão e Vendas", layout="wide")
+st.sidebar.title("Sunne Gestão e Vendas")
+menu = st.sidebar.radio("Navegação", ["Dashboard", "Gestão Comercial", "Faturamento", "Rateio de Energia", "Gestão de Contratos", "Configurações"])
 
 if menu == "Dashboard":
     st.title("📊 Dashboard de Gestão")
     conn = sqlite3.connect("usina.db", check_same_thread=False)
     df_vendas = pd.read_sql_query("SELECT * FROM vendas", conn)
-    df_pagamentos = pd.read_sql_query("SELECT * FROM pagamentos", conn)
+    df_faturamento = pd.read_sql_query("SELECT * FROM faturamento", conn)
     conn.close()
     
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Vendas Fechadas")
+        st.subheader("Vendas Concluídas")
         st.metric(label="Total de Vendas", value=len(df_vendas))
     with col2:
-        st.subheader("Pagamentos Recebidos")
-        st.metric(label="Total Faturado", value=df_pagamentos["valor"].sum())
+        st.subheader("Faturamento Total")
+        st.metric(label="Total Recebido", value=df_faturamento["valor"].sum())
 
-if menu == "CRM":
-    st.title("📋 Gestão de Clientes e Leads")
-    st.subheader("Cadastro de Novos Clientes")
+if menu == "Gestão Comercial":
+    st.title("📋 Gestão Comercial e CRM")
+    st.subheader("Cadastro de Clientes e Leads")
     nome = st.text_input("Nome do Cliente")
     cpf_cnpj = st.text_input("CPF/CNPJ")
     contato = st.text_input("Contato")
@@ -107,16 +107,20 @@ if menu == "CRM":
 if menu == "Faturamento":
     st.title("💰 Gestão de Faturamento e Cobrança")
     conn = sqlite3.connect("usina.db", check_same_thread=False)
-    df_pagamentos = pd.read_sql_query("SELECT * FROM pagamentos", conn)
+    df_faturamento = pd.read_sql_query("SELECT * FROM faturamento", conn)
     conn.close()
-    st.dataframe(df_pagamentos)
+    st.dataframe(df_faturamento)
 
-if menu == "Gestão de UC’s e UG’s":
-    st.title("🔧 Gestão de Unidades Consumidoras e Geradoras")
+if menu == "Rateio de Energia":
+    st.title("🔧 Rateio de Energia e Auditoria de Créditos")
+    st.write("Aqui será implementada a distribuição de créditos de energia conforme a participação dos clientes na usina.")
+
+if menu == "Gestão de Contratos":
+    st.title("📄 Gestão de Contratos")
     conn = sqlite3.connect("usina.db", check_same_thread=False)
-    df_usinas = pd.read_sql_query("SELECT * FROM usina", conn)
+    df_contratos = pd.read_sql_query("SELECT * FROM contratos", conn)
     conn.close()
-    st.dataframe(df_usinas)
+    st.dataframe(df_contratos)
 
 if menu == "Configurações":
     st.title("⚙️ Configurações Gerais")
