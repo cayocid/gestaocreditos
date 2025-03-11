@@ -5,3 +5,6 @@ plotly
 mercadopago
 stripe
 docusign-esign
+PyJWT==2.6.0
+urllib3==1.26.16
+certifi
