@@ -1,4 +1,8 @@
 streamlit
+sqlite3
 pandas
-matplotlib
-fpdf
+requests
+plotly
+mercadopago
+stripe
+docusign-esign
