@@ -67,57 +67,60 @@ def init_db():
 
 init_db()
 
-st.title("Gerenciamento de Usinas Fotovoltaicas")
+# Interface com menu lateral fixo
+st.set_page_config(page_title="Gestão de Energia", layout="wide")
+st.sidebar.title("Menu")
+menu = st.sidebar.radio("Navegação", ["Dashboard", "CRM", "Faturamento", "Gestão de UC’s e UG’s", "Configurações"])
 
-# Seção de Cadastro de Usina
-st.subheader("Cadastrar Nova Usina")
-nome_usina = st.text_input("Nome da Usina")
-localizacao_usina = st.text_input("Localização")
-capacidade_usina = st.number_input("Capacidade (kW)", min_value=1.0, format="%.2f")
-if st.button("Cadastrar Usina"):
+if menu == "Dashboard":
+    st.title("📊 Dashboard de Gestão")
     conn = sqlite3.connect("usina.db", check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO usina (nome, localizacao, capacidade) VALUES (?, ?, ?)",
-                   (nome_usina, localizacao_usina, capacidade_usina))
-    conn.commit()
+    df_vendas = pd.read_sql_query("SELECT * FROM vendas", conn)
+    df_pagamentos = pd.read_sql_query("SELECT * FROM pagamentos", conn)
     conn.close()
-    st.success("Usina cadastrada com sucesso!")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Vendas Fechadas")
+        st.metric(label="Total de Vendas", value=len(df_vendas))
+    with col2:
+        st.subheader("Pagamentos Recebidos")
+        st.metric(label="Total Faturado", value=df_pagamentos["valor"].sum())
 
-# Seção de Cadastro de Clientes
-st.subheader("Cadastrar Cliente")
-nome_cliente = st.text_input("Nome do Cliente")
-cpf_cnpj = st.text_input("CPF/CNPJ")
-contato = st.text_input("Contato")
-endereco = st.text_input("Endereço")
-usina_id = st.selectbox("Selecione a Usina", pd.read_sql_query("SELECT id, nome FROM usina", sqlite3.connect("usina.db", check_same_thread=False)))
-if st.button("Cadastrar Cliente"):
+if menu == "CRM":
+    st.title("📋 Gestão de Clientes e Leads")
+    st.subheader("Cadastro de Novos Clientes")
+    nome = st.text_input("Nome do Cliente")
+    cpf_cnpj = st.text_input("CPF/CNPJ")
+    contato = st.text_input("Contato")
+    endereco = st.text_input("Endereço")
+    usina_id = st.selectbox("Selecione a Usina", pd.read_sql_query("SELECT id, nome FROM usina", sqlite3.connect("usina.db", check_same_thread=False)))
+    if st.button("Cadastrar Cliente"):
+        conn = sqlite3.connect("usina.db", check_same_thread=False)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO clientes (nome, cpf_cnpj, contato, endereco, usina_id) VALUES (?, ?, ?, ?, ?)",
+                       (nome, cpf_cnpj, contato, endereco, usina_id))
+        conn.commit()
+        conn.close()
+        st.success("Cliente cadastrado com sucesso!")
+
+if menu == "Faturamento":
+    st.title("💰 Gestão de Faturamento e Cobrança")
     conn = sqlite3.connect("usina.db", check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO clientes (nome, cpf_cnpj, contato, endereco, usina_id) VALUES (?, ?, ?, ?, ?)",
-                   (nome_cliente, cpf_cnpj, contato, endereco, usina_id))
-    conn.commit()
+    df_pagamentos = pd.read_sql_query("SELECT * FROM pagamentos", conn)
     conn.close()
-    st.success("Cliente cadastrado com sucesso!")
+    st.dataframe(df_pagamentos)
 
-# Visualizar progresso das vendas por usina
-st.subheader("Progresso das Vendas por Usina")
-conn = sqlite3.connect("usina.db", check_same_thread=False)
-df_usinas = pd.read_sql_query("SELECT * FROM usina", conn)
-df_vendas = pd.read_sql_query("SELECT usina_id, SUM(potencia_alocada) as potencia_vendida FROM vendas WHERE status = 'CONTRATO ASSINADO' GROUP BY usina_id", conn)
-conn.close()
+if menu == "Gestão de UC’s e UG’s":
+    st.title("🔧 Gestão de Unidades Consumidoras e Geradoras")
+    conn = sqlite3.connect("usina.db", check_same_thread=False)
+    df_usinas = pd.read_sql_query("SELECT * FROM usina", conn)
+    conn.close()
+    st.dataframe(df_usinas)
 
-df_usinas = df_usinas.merge(df_vendas, left_on="id", right_on="usina_id", how="left").fillna(0)
-df_usinas["potencia_disponivel"] = df_usinas["capacidade"] - df_usinas["potencia_vendida"]
+if menu == "Configurações":
+    st.title("⚙️ Configurações Gerais")
+    st.write("Configurações do sistema e ajustes avançados")
 
-fig = px.bar(df_usinas, x="nome", y=["potencia_vendida", "potencia_disponivel"], title="Progresso das Vendas por Usina")
-st.plotly_chart(fig)
-
-# Exibir lista de contratos
-st.subheader("Contratos Assinados")
-conn = sqlite3.connect("usina.db", check_same_thread=False)
-df_contratos = pd.read_sql_query("SELECT clientes.nome, contratos.contrato_url, contratos.status FROM contratos JOIN clientes ON contratos.cliente_id = clientes.id", conn)
-conn.close()
-st.dataframe(df_contratos)
-
-if st.button("Atualizar Dados"):
+if st.sidebar.button("Atualizar Dados"):
     st.experimental_rerun()
